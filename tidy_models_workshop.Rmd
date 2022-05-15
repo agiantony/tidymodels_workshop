@@ -1,0 +1,898 @@
+---
+title: "Tidy Models Workshop"
+author: "Jose Sotelo"
+date: "5/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br><br>
+
+# **Welcome Everyone!**
+
+<br><br>
+
+**The goal of today is to begin to understand the basics of the R package Tidymodels.**
+
+
+There is a lot of possible information that can be provided on this topic and this workshop isn't meant to exhaust those resources. If you have questions throughout the workshop you cn type them in the chat or I will be happy to meet with you afterwords. I am also willing to talk about the subject either through  email josesotelo2023@u.northwestern.edu or if you would like some help using Tidymodels for your own data, we do free [consults](https://app.smartsheet.com/b/form/2f2ec327e6164f83b588b7bbe2e2b56f) for all of your data science needs!. 
+
+
+<br><br>
+
+
+
+## Agenda for today
+
+* A little background on modeling and Tidymodels
+    
+    + What is Tidymodels?
+
+    + Types of models
+    
+    + Terminology
+    
+    + When modeling is used
+    
+    + What does the basic model workflow look like 
+    
+* Set up a simple regression model
+
+    + Prep data
+  
+    + Create recipe
+    
+    + "Bake"
+    
+    + Fitting test data
+    
+    + Assessing fit
+    
+    + Other types of regression models
+    
+* Set up a simple classification model 
+    
+    + Steps are similar to regression but how do things differ?
+    
+<br><br>
+    
+        
+## **Tidymodels Background**
+
+<br><br>
+
+The tidymodels framework is a collection of packages for modeling and machine learning using tidyverse principles.
+
+
+**Yes we are doing machine learning!**
+
+<br><br>
+
+What packages come with tidymodels?
+
+
+![](images/tidymodels_packages.png)
+
+<br><br>
+
+
+### **Types of models**
+
+<br><br>
+
+#### **Descriptive Models**
+
+The purpose of a descriptive model is to describe or illustrate characteristics of some data. The analysis might have no other purpose than to visually emphasize some trend or artifact in the data.
+
+
+#### **Inferential Models**
+
+
+The goal of an inferential model is to produce a decision for a research question or to explore a specific hypothesis, similar to how statistical tests are used. An inferential model starts with some predefined conjecture or idea about a population, and produces a statistical conclusion such as an interval estimate or the rejection of a hypothesis.
+
+
+#### **Predictive Model**
+
+
+Sometimes data are modeled to produce the most accurate prediction possible for new data. Here, the primary goal is that the predicted values have the highest possible fidelity to the true value of the new data.
+
+**Predictive models are what we will be focusing on today!**
+
+<br><br>
+
+### **Terminology**
+
+<br><br>
+
+**Unsupervised models** are those that learn patterns, clusters, or other characteristics of the data but lack an outcome.
+
+
+**Supervised models** are those that have an outcome variable. Linear regression, neural networks, and numerous other methodologies fall into this category.
+
+
+<br><br>
+
+Within supervised models, there are two main sub-categories:
+
+<br><br>
+
+**Regression** predicts a numeric outcome.
+
+**Classification** predicts an outcome that is an ordered or unordered set of qualitative values.
+
+<br><br>
+
+### **When is Modeling Used?**
+
+<br><br>
+
+![Where does modeling fit?](images/overall_process.png)
+
+
+### **What does the Tidymodels process looklike**
+
+<br><br>
+
+There are many ways to go about the process of creating a model but I will be showing you the organization that I am most familiar with. This is definitely not the only way to do it though! One good things about Tidymodels is that the process is flexible in certain ways. 
+
+
+We will go over a couple of examples of this but the overall process looks like the chart bellow
+
+![](images/tidy_models_basics.png)
+<br><br>
+
+## **Load Packages and Set Seed**
+
+<br><br>
+
+```{r,warning=FALSE,message=FALSE}
+
+# Load packages here!
+library(tidymodels)
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(yardstick)
+library(ranger)
+library(glmnet)
+
+# Set seed here!
+
+set.seed(1192)
+
+```
+<br><br>
+
+# **Regression Model**
+
+<br><br>
+
+For our regression model, we will be working with a data set from the UCI (University of California, Irvine) Machine Learning repository ([see website here](http://archive.ics.uci.edu/ml/datasets/Abalone)). The full data set consists of 4,177 observations of abalone (type of mollusk) in Tasmania. 
+
+
+(Fun fact: [Tasmania](https://en.wikipedia.org/wiki/Tasmania "Tasmania") supplies about 25% of the yearly world abalone harvest.)
+
+
+
+The age of an abalone is typically determined by cutting the shell open and counting the number of rings with a microscope. The purpose of this data set is to determine whether abalone age (**number of rings + 1.5**) can be accurately predicted using other, easier-to-obtain information about the abalone.
+
+
+
+The full abalone data set is located in the `\data` subdirectory. Read it into *R* as a tibble. Take a moment to read through the codebook (`abalone_codebook.txt`) and familiarize yourself with the variable definitions.
+
+<br><br>
+
+
+## **Read in Data**
+
+<br><br>
+
+```{r}
+abalone<-read.csv("data/abalone.csv")
+```
+
+<br><br>
+
+## **Skim Data and Describe your Outcome Variable**
+
+<br><br>
+
+```{r}
+
+abalone<-abalone%>%
+  mutate(age=rings+1.5)
+
+skim_without_charts(abalone)
+
+ggplot(abalone,aes(x=age))+
+  geom_histogram(bins=30)
+
+```
+<br><br>
+
+
+## **Spliting Data for Regression Model**
+
+Here we split our data so that we can train our model then later see how well our model can fit the rest of our data or our testing set. 
+
+Here we choose to stratify our split. This impacts how we randomly sample our data into either our training or testing data. If not stratified then sets are 100% randomly sampled. if we choose to stratify our data is split into quartiles (can be changed) and then randomly sampled within each of those quartiles.
+
+This can help with skewness in our outcome variable. One can imagine that if our age is highly skewed and a larger percentage of our training data is from the skewed side of the data, then our model might not be good at predicting data points that are at the other side of the data.
+
+<br><br>
+
+```{r}
+
+abalone_split <- initial_split(abalone, prop = 0.75,strata = age)
+
+
+abalone_split
+
+
+abalone_train<-training(abalone_split)
+
+
+abalone_test<-testing(abalone_split)
+
+```
+
+<br><br>
+
+## **Regression Recipe**
+
+Let's begin to construct our recipe for our model. First lets make a recipe with age as our outcome variable. because we constructed age using ring and there will be a highly correlated relationship we want to remove that variable from our recipe.
+
+<br><br>
+
+```{r}
+
+abalone_recipe<-recipe(age ~ .,data = abalone_train)%>%
+  step_rm("rings")
+
+```
+
+<br><br>
+
+Next we might want to create dummy variables for our categorical data. We saw that we had one categorical variable named `type`.
+
+<br><br>
+
+```{r}
+
+abalone_recipe<-recipe(age ~ .,data = abalone_train)%>%
+  step_rm("rings")%>%
+  step_dummy(type)
+
+
+```
+
+<br><br>
+
+Next we might want to add interactions of some variable or normalize. We can do this with the code bellow. Note that because we created multiple dummy variables for `type` we will want to add the `starts_with()` function to include all those variables in our interaction
+
+<br><br>
+
+```{r}
+
+abalone_recipe<-recipe(age ~ .,data = abalone_train)%>%
+  step_rm("rings")%>%
+  step_dummy(type)%>%
+  step_interact(~starts_with("type"):shucked_weight+
+                               longest_shell:diameter+
+                               shucked_weight:shell_weight)%>%
+  step_normalize(all_predictors())
+
+
+
+```
+
+<br><br>
+
+## **Bake your Recipe**
+
+
+This can show us what the training data will look like. I like to check to make sure that all my dummy coding, standardizing, and interactions appear in our training set. 
+
+```{r}
+
+
+
+prep(abalone_recipe, training = abalone_train)%>%
+  bake(new_data=NULL)%>%
+  head()
+  
+
+```
+<br><br>
+
+## **Choosing Models**
+
+<br><br>
+
+The scope of this workshop is not to chose which model might be best for a certain data set so for our regression data we will choose four simple models (Regression, Random forest, Lasso, Ridge). But there are many models to choose from and they can be found [here](https://www.tidymodels.org/find/parsnip/)
+
+<br><br>
+
+```{r}
+
+regression_model<-linear_reg()%>%
+  set_engine("lm")
+
+```
+
+<br><br>
+
+## **Create your Workflow**
+
+<br><br>
+
+```{r}
+
+regression_workflow<-workflow()%>%
+  add_model(regression_model)%>%
+  add_recipe(abalone_recipe)
+
+```
+
+## **Train your Model**
+
+<br><br>
+
+```{r}
+
+regression_fit<-regression_workflow%>%
+  fit(abalone_train)
+
+
+tidy(regression_fit)
+```
+<br><br>
+
+## **Predict with your Trained Model**
+
+Use your `fit()` object to predict the age of a hypothetical female abalone with longest_shell = 0.50, diameter = 0.10, height = 0.30, whole_weight = 4, shucked_weight = 1, viscera_weight = 2, shell_weight = 1 .
+
+```{r}
+abalone_prediction<-tibble(type= "F",longest_shell = 0.50, diameter = 0.10, height = 0.30, whole_weight = 4, shucked_weight = 1, viscera_weight = 2, shell_weight = 1,rings=11)
+
+predict(regression_fit, abalone_prediction)
+
+```
+
+
+
+## **Now it's your Turn!**
+
+Try to enter values in the code bellow to try to predict a abalone younger that what I got above of 22.78. 
+
+It is okay if you get errors in predicting because you might be choosing values that aren't in the data set. But keep changing the numbers to try to get a prediction!
+
+**Hints**
+
+Look at the skim of the data to look for possible values.
+
+For `type` the only possible values are 1,2, or 3.
+
+You might want to take a quick look at the coefficents above to see how our covariates influence our outcome variable
+
+Make sure to remove the `eval=FALSE` from the top of your chunk
+
+
+**Lets see who can get the youngest Mollusk**
+
+<br><br>
+
+
+```{r,eval=FALSE}
+abalone_prediction_2<-tibble(type= ,longest_shell = , diameter = , height = , whole_weight = , shucked_weight = , viscera_weight = , shell_weight = ,rings=)
+
+predict(regression_fit, abalone_prediction_2)
+
+```
+
+<br><br>
+
+## **How well does your model predict the testing data?**
+
+<br><br>
+
+```{r}
+abalone_metric<-metric_set(rmse,rsq,mae)
+
+regression_assesment<-regression_fit%>%
+  predict(new_data = abalone_test)%>%
+  bind_cols(abalone_test%>%select(age))%>%
+  abalone_metric(truth=age,estimate=.pred)%>%
+  mutate(model="regular regression")
+
+regression_assesment
+
+```
+
+<br><br>
+
+# **Lets try Different Model Methods!**
+
+<br><br>
+
+## **Random Forest**
+
+```{r random forest}
+# define random forest model
+
+random_forest_model <- rand_forest(mode = "regression", mtry = 6, trees = 500) %>%
+  set_engine("ranger")
+
+# define workflow 
+
+random_forest_workflow<-workflow()%>%
+  add_model(random_forest_model)%>%
+  add_recipe(abalone_recipe)
+
+
+
+# fit workflow
+
+random_forest_fit<-random_forest_workflow%>%
+  fit(abalone_train)
+
+
+
+# assess performance
+
+random_forest_assesment<-random_forest_fit%>%
+  predict(new_data = abalone_test)%>%
+  bind_cols(abalone_test%>%select(age))%>%
+  abalone_metric(truth=age,estimate=.pred)%>%
+  mutate(model="random forest")
+
+```
+
+
+## **Lasso Regression (Regularized Regression)**
+
+<br><br>
+
+```{r lasso}
+# define lassoso model
+
+# mixture = 1 specifies lassoso; mixture = 0 for ridge
+lasso_model <- linear_reg(penalty = 0.001, mixture = 1) %>% 
+  set_engine("glmnet")
+
+# define workflow 
+lasso_workflow<-workflow()%>%
+  add_model(lasso_model)%>%
+  add_recipe(abalone_recipe)
+
+
+# fit workflow
+
+lasso_fit<-lasso_workflow%>%
+  fit(abalone_train)
+
+
+
+# assess performance
+
+lasso_assesment<-lasso_fit%>%
+  predict(new_data = abalone_test)%>%
+  bind_cols(abalone_test%>%select(age))%>%
+  abalone_metric(truth=age,estimate=.pred)%>%
+  mutate(model="lasso regression")
+```
+
+<br><br>
+
+## **Ridge Regression (Regularized Regression)**
+
+<br><br>
+
+```{r ridge}
+
+
+
+ridge_model <- linear_reg(penalty = 0.001, mixture = 0) %>% 
+  set_engine("glmnet")
+
+# define workflow 
+ridge_workflow<-workflow()%>%
+  add_model(ridge_model)%>%
+  add_recipe(abalone_recipe)
+
+
+# fit workflow
+
+ridge_fit<-ridge_workflow%>%
+  fit(abalone_train)
+
+
+
+# assess performance
+
+ridge_assesment<-ridge_fit%>%
+  predict(new_data = abalone_test)%>%
+  bind_cols(abalone_test%>%select(age))%>%
+  abalone_metric(truth=age,estimate=.pred)%>%
+  mutate(model="ridge regression")
+
+```
+
+<br><br>
+
+
+After assessing the performance of these 4 methods, which do you think is best? 
+
+```{r}
+
+final_model_assesments<-regression_assesment%>%
+  bind_rows(random_forest_assesment)%>%
+  bind_rows(lasso_assesment)%>%
+  bind_rows(ridge_assesment)%>%
+  filter(.metric=="rmse")%>%
+  arrange(.estimate)
+
+final_model_assesments
+
+```
+
+In this case we are using residual mean squared error to guage model fit. You can ask for multiple type of fit statistics but for simplicity here I am only choosing one. We see that of the four models we ran, our random forest seems to have the lowest rmse which is one way to compare fit.
+
+
+## **Now It's Your Turn!**
+
+<br><br>
+
+With the code below, try to create a random forest model with different hyperparameters that has a better fit (lower rmse) than the model be just made. 
+
+
+For some guidance, here are what the three hyperperameters for random forest are
+
+`mtry`
+An integer for the number of predictors that will be randomly sampled at each split when creating the tree models.
+
+`trees`
+An integer for the number of trees contained in the ensemble.
+
+`min_n`
+An integer for the minimum number of data points in a node that are required for the node to be split further.
+
+Make sure you remove eval=false and also numbers that are too large might night allow your model to run
+
+
+**Let's see who can get the best rmse!**
+
+<br><br>
+
+
+```{r your random forest,eval=FALSE}
+# define random forest model
+
+random_forest_model_2 <- rand_forest(mode = "regression", mtry = , trees = ,min_n = ) %>%
+  set_engine("ranger")
+
+# define workflow 
+
+random_forest_workflow_2<-workflow()%>%
+  add_model(random_forest_model)%>%
+  add_recipe(abalone_recipe)
+
+
+
+# fit workflow
+
+random_forest_fit_2<-random_forest_workflow%>%
+  fit(abalone_train)
+
+
+
+# assess performance
+
+random_forest_assesment_2<-random_forest_fit%>%
+  predict(new_data = abalone_test)%>%
+  bind_cols(abalone_test%>%select(age))%>%
+  abalone_metric(truth=age,estimate=.pred)%>%
+  mutate(model="your random forest")
+
+```
+
+<br><br>
+
+```{r,eval=FALSE}
+
+your_model_assesment<-regression_assesment%>%
+  bind_rows(random_forest_assesment)%>%
+  bind_rows(random_forest_assesment_2)%>%
+  filter(.metric=="rmse")%>%
+  arrange(.estimate)
+
+your_model_assesment
+
+```
+
+<br><br>
+
+# **Classification Model**
+
+<br><br>
+
+For our classification model, where our outcomes are binary, we will be using the titanic data. Our goal is to predict which passengers would survive the [Titanic shipwreck](https://en.wikipedia.org/wiki/Titanic).
+
+
+Lets Load the data from `data/titanic.csv` into *R* and familiarize ourselves with the variables it contains using the codebook (`data/titanic_codebook.txt`).
+
+Notice that `survived` and `pclassos` should be changed to factors. When changing `survived` to a factor, you may want to reorder the factor so that *"Yes"* is the first level.
+
+<br><br>
+
+```{r}
+titanic<-read_csv(file="data/titanic.csv")%>%
+  clean_names()%>%
+  mutate(pclassos=factor(pclass),
+         survived=factor(survived,levels=c("Yes","No")))
+```
+
+## **Look at the Distribution of our Outcome Variable**
+
+<br><br>
+
+Using the full data set, explore/describe the distribution of the outcome variable `survived`.
+
+Perform a skim of the training data and note any potential issues such as missingness.
+
+```{r}
+
+ggplot(titanic,aes(survived))+
+  geom_bar()
+
+skim_without_charts(titanic)
+
+```
+
+<br><br>
+
+## **Split our data**
+
+<br><br>
+
+Lets use stratified sampling. We should choose the proportions to split the data into. Verify that the training and testing data sets have the appropriate number of observations. 
+
+Why is it a good idea to use stratified sampling for this data?
+
+```{r}
+titanic_split<-initial_split(titanic,prop = .80,strata = survived)
+
+titanic_test<-testing(titanic_split)
+
+titanic_train<-training(titanic_split)
+
+```
+
+<br><br>
+
+## **Which Models can be used with Classification Data?**
+
+<br><br>
+
+```{r}
+
+show_engines("rand_forest")
+
+
+
+
+```
+
+<br><br>
+
+
+
+## **Logistic regression recipe**
+
+<br><br>
+
+Using the training data, create and store a recipe setting `survived` as the outcome and using the following predictors: ticket class, sex, age, number of siblings or spouses aboard, number of parents or children aboard, and passenger fare.
+
+
+
+
+Recall that there were missing values for `age`. To deal with this, add an imputation step using `step_impute_linear()`. 
+
+
+
+```{r}
+logistic_recipe_test<-recipe(survived~pclass+sex+age+sib_sp+parch+fare,data = titanic_train)%>%
+  step_impute_linear(age)
+
+```
+
+<br><br>
+
+ 
+Next, use `step_dummy()` to **dummy** encode categorical predictors of class and sex.
+
+```{r,eval=FALSE}
+logistic_recipe<-recipe(survived~pclass+sex+age+sib_sp+parch+fare,data = titanic_train)%>%
+  step_impute_linear(age)%>%
+  step_dummy()
+
+```
+
+<br><br>
+
+How would you add an interaction with age and fare as well as sex and fare using `step_interact`?
+
+
+```{r,eval=FALSE}
+
+logi_recipe_2<-recipe(survived~pclass+sex+age+sib_sp+parch+fare,data = titanic_train)%>%
+  step_impute_linear(age)%>%
+  step_dummy()%>%
+  step_interact()
+
+
+
+```
+
+<br><br>
+
+**This is what your recipe should look like!**
+
+```{r}
+logistic_recipe<-recipe(survived~pclass+sex+age+sib_sp+parch+fare,data = titanic_train)%>%
+  step_impute_linear(age)%>%
+  step_dummy(pclass,sex)%>%
+  step_interact(~age:fare+starts_with("sex"):fare)
+
+
+```
+
+
+## **Random Forrest recipe**
+
+<br><br>
+
+```{r}
+random_forest_recipe<-recipe(survived~pclass+sex+age+sib_sp+parch+fare,data = titanic_train)%>%
+  step_impute_linear(age)%>%
+  step_dummy(pclass,sex,one_hot = TRUE)
+```
+
+<br><br>
+
+## **Bake Both Recipes **
+
+<br><br>
+
+How does one hot change your variables?
+
+
+```{r}
+
+logistic_recipe%>%
+  prep()%>%
+  bake(new_data=NULL)%>%
+  head()
+
+
+
+
+random_forest_recipe%>%
+  prep()%>%
+  bake(new_data=NULL)%>%
+  head()
+
+
+```
+
+<br><br>
+
+## **Fit your Logistic Model**
+
+<br><br>
+
+```{r}
+logistic_model<-logistic_reg()%>%
+  set_engine("glm")%>%
+  set_mode("classification")
+
+
+logistic_workflow<-workflow()%>%
+  add_model(logistic_model)%>%
+  add_recipe(logistic_recipe)
+
+
+logistic_fit<-logistic_workflow%>%
+  fit(data=titanic_train)
+
+tidy(logistic_fit)
+
+```
+
+<br><br>
+
+# **Fit a Random Forest with no Hyperparameters**
+
+<br><br>
+
+```{r}
+random_forest_model<-rand_forest()%>%
+  set_engine("ranger")%>%
+  set_mode("classification")
+
+
+random_forest_workflow<-workflow()%>%
+  add_model(random_forest_model)%>%
+  add_recipe(random_forest_recipe)
+
+
+random_forest_fit<-random_forest_workflow%>%
+  fit(data=titanic_train)
+
+
+
+```
+
+<br><br>
+
+## **Fit a Second Random Forest with Hyperparameters**
+
+<br><br>
+
+```{r}
+
+random_forest_model_2<-rand_forest(mtry = 8,trees =10000,min_n = 3)%>%
+  set_engine("ranger")%>%
+  set_mode("classification")
+
+
+random_forest_workflow_2<-workflow()%>%
+  add_model(random_forest_model_2)%>%
+  add_recipe(random_forest_recipe)
+
+
+random_forest_fit_2<-random_forest_workflow_2%>%
+  fit(data=titanic_train)
+
+
+```
+
+<br><br>
+
+# **Which Model did Best?**
+
+<br><br>
+
+
+```{r}
+model_assesment<-logistic_fit%>%
+  predict(new_data=titanic_test)%>%
+  bind_cols(titanic_test%>%
+              select(survived))%>%
+  accuracy(truth=survived,estimate=.pred_class)%>%
+  mutate(model="Logistic Regression")
+
+model_assesment2<-random_forest_fit%>%
+  predict(new_data=titanic_test)%>%
+  bind_cols(titanic_test%>%
+              select(survived))%>%
+  accuracy(truth=survived,estimate=.pred_class)%>%
+  mutate(model="Random Forrest 1")%>%
+  bind_rows(model_assesment)
+
+model_assesment3<-random_forest_fit_2%>%
+  predict(new_data=titanic_test)%>%
+  bind_cols(titanic_test%>%
+              select(survived))%>%
+  accuracy(truth=survived,estimate=.pred_class)%>%
+  mutate(model="Random Forrest 2")%>%
+  bind_rows(model_assesment2)
+
+model_assesment3%>%
+  arrange(-.estimate)
+
+```
+
