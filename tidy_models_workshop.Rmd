@@ -1,4 +1,4 @@
----
+ ---
 title: "Tidy Models Workshop"
 author: "Jose Sotelo"
 date: "5/5/2022"
@@ -132,7 +132,7 @@ Within supervised models, there are two main sub-categories:
 ![Where does modeling fit?](images/overall_process.png)
 
 
-### **What does the Tidymodels process looklike**
+### **What does the Tidymodels process look like**
 
 <br><br>
 
@@ -214,7 +214,9 @@ ggplot(abalone,aes(x=age))+
 <br><br>
 
 
-## **Spliting Data for Regression Model**
+## **Splitting Data for Regression Model**
+
+<br><br>
 
 Here we split our data so that we can train our model then later see how well our model can fit the rest of our data or our testing set. 
 
@@ -243,7 +245,9 @@ abalone_test<-testing(abalone_split)
 
 ## **Regression Recipe**
 
-Let's begin to construct our recipe for our model. First lets make a recipe with age as our outcome variable. because we constructed age using ring and there will be a highly correlated relationship we want to remove that variable from our recipe.
+<br><br>
+
+Let's begin to construct our recipe for our model. First lets make a recipe with age as our outcome variable using all the other variables in our data. Because we constructed age using ring and there will be a highly correlated relationship we want to remove that variable from our recipe.
 
 <br><br>
 
@@ -271,7 +275,7 @@ abalone_recipe<-recipe(age ~ .,data = abalone_train)%>%
 
 <br><br>
 
-Next we might want to add interactions of some variable or normalize. We can do this with the code bellow. Note that because we created multiple dummy variables for `type` we will want to add the `starts_with()` function to include all those variables in our interaction
+Next we might want to add interactions of some variable or normalize (center and scale) or data. We can do this with the code bellow. Note that because we created multiple dummy variables for `type` we will want to add the `starts_with()` function to include all those variables in our interaction
 
 <br><br>
 
@@ -293,8 +297,11 @@ abalone_recipe<-recipe(age ~ .,data = abalone_train)%>%
 
 ## **Bake your Recipe**
 
+<br><br>
 
 This can show us what the training data will look like. I like to check to make sure that all my dummy coding, standardizing, and interactions appear in our training set. 
+
+<br><br>
 
 ```{r}
 
@@ -337,6 +344,8 @@ regression_workflow<-workflow()%>%
 
 ```
 
+<br><br>
+
 ## **Train your Model**
 
 <br><br>
@@ -353,6 +362,8 @@ tidy(regression_fit)
 
 ## **Predict with your Trained Model**
 
+<br><br>
+
 Use your `fit()` object to predict the age of a hypothetical female abalone with longest_shell = 0.50, diameter = 0.10, height = 0.30, whole_weight = 4, shucked_weight = 1, viscera_weight = 2, shell_weight = 1 .
 
 ```{r}
@@ -366,6 +377,8 @@ predict(regression_fit, abalone_prediction)
 
 ## **Now it's your Turn!**
 
+<br><br>
+
 Try to enter values in the code bellow to try to predict a abalone younger that what I got above of 22.78. 
 
 It is okay if you get errors in predicting because you might be choosing values that aren't in the data set. But keep changing the numbers to try to get a prediction!
@@ -374,9 +387,9 @@ It is okay if you get errors in predicting because you might be choosing values 
 
 Look at the skim of the data to look for possible values.
 
-For `type` the only possible values are 1,2, or 3.
+For `type` the only possible values are M,F, or I.
 
-You might want to take a quick look at the coefficents above to see how our covariates influence our outcome variable
+You might want to take a quick look at the coefficients above to see how our covariates influence our outcome variable
 
 Make sure to remove the `eval=FALSE` from the top of your chunk
 
@@ -457,9 +470,9 @@ random_forest_assesment<-random_forest_fit%>%
 <br><br>
 
 ```{r lasso}
-# define lassoso model
+# define lasso model
 
-# mixture = 1 specifies lassoso; mixture = 0 for ridge
+# mixture = 1 specifies lasso; mixture = 0 for ridge
 lasso_model <- linear_reg(penalty = 0.001, mixture = 1) %>% 
   set_engine("glmnet")
 
@@ -539,8 +552,10 @@ final_model_assesments
 
 ```
 
-In this case we are using residual mean squared error to guage model fit. You can ask for multiple type of fit statistics but for simplicity here I am only choosing one. We see that of the four models we ran, our random forest seems to have the lowest rmse which is one way to compare fit.
+In this case we are using residual mean squared error to gauge model fit. You can ask for multiple type of fit statistics but for simplicity here I am only choosing one. We see that of the four models we ran, our random forest seems to have the lowest rmse which is one way to compare fit.
 
+
+<br><br>
 
 ## **Now It's Your Turn!**
 
