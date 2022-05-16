@@ -547,7 +547,7 @@ abalone_test&lt;-testing(abalone_split)</code></pre>
   step_rm(&quot;rings&quot;)%&gt;%
   step_dummy(type)</code></pre>
 <p><br><br></p>
-<p>Next we might want to add interactions of some variable or normalize (center and scale) or data. We can do this with the code bellow. Note that because we created multiple dummy variables for <code>type</code> we will want to add the <code>starts_with()</code> function to include all those variables in our interaction</p>
+<p>Next we might want to add interactions of some variable or normalize (center and scale) our data. We can do this with the code bellow. Note that because we created multiple dummy variables for <code>type</code> we will want to add the <code>starts_with()</code> function to include all those variables in our interaction</p>
 <p><br><br></p>
 <pre class="r"><code>abalone_recipe&lt;-recipe(age ~ .,data = abalone_train)%&gt;%
   step_rm(&quot;rings&quot;)%&gt;%

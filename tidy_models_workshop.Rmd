@@ -275,7 +275,7 @@ abalone_recipe<-recipe(age ~ .,data = abalone_train)%>%
 
 <br><br>
 
-Next we might want to add interactions of some variable or normalize (center and scale) or data. We can do this with the code bellow. Note that because we created multiple dummy variables for `type` we will want to add the `starts_with()` function to include all those variables in our interaction
+Next we might want to add interactions of some variable or normalize (center and scale) our data. We can do this with the code bellow. Note that because we created multiple dummy variables for `type` we will want to add the `starts_with()` function to include all those variables in our interaction
 
 <br><br>
 
