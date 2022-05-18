@@ -805,7 +805,7 @@ random_forest_fit_2&lt;-random_forest_workflow%&gt;%
 
 # assess performance
 
-random_forest_assesment_2&lt;-random_forest_fit%&gt;%
+random_forest_assesment_2&lt;-random_forest_fit_2%&gt;%
   predict(new_data = abalone_test)%&gt;%
   bind_cols(abalone_test%&gt;%select(age))%&gt;%
   abalone_metric(truth=age,estimate=.pred)%&gt;%
