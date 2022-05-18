@@ -1,4 +1,4 @@
- ---
+---
 title: "Tidy Models Workshop"
 author: "Jose Sotelo"
 date: "5/5/2022"
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 **The goal of today is to begin to understand the basics of the R package Tidymodels.**
 
 
-There is a lot of possible information that can be provided on this topic and this workshop isn't meant to exhaust those resources. If you have questions throughout the workshop you cn type them in the chat or I will be happy to meet with you afterwords. I am also willing to talk about the subject either through  email josesotelo2023@u.northwestern.edu or if you would like some help using Tidymodels for your own data, we do free [consults](https://app.smartsheet.com/b/form/2f2ec327e6164f83b588b7bbe2e2b56f) for all of your data science needs!. 
+There is a lot of possible information that can be provided on this topic and this workshop isn't meant to exhaust those resources. If you have questions throughout the workshop you can type them in the chat or I will be happy to meet with you afterwords. I am also willing to talk about the subject either through  email josesotelo2023@u.northwestern.edu or if you would like some help using Tidymodels for your own data, we do free [consults](https://app.smartsheet.com/b/form/2f2ec327e6164f83b588b7bbe2e2b56f) for all of your data science needs!
 
 
 <br><br>
@@ -136,7 +136,7 @@ Within supervised models, there are two main sub-categories:
 
 <br><br>
 
-There are many ways to go about the process of creating a model but I will be showing you the organization that I am most familiar with. This is definitely not the only way to do it though! One good things about Tidymodels is that the process is flexible in certain ways. 
+There are many ways to go about the process of creating a model but I will be showing you the organization that I am most familiar with. This is definitely not the only way to do it though! One good thing about Tidymodels is that the process is flexible in certain ways. 
 
 
 We will go over a couple of examples of this but the overall process looks like the chart bellow
